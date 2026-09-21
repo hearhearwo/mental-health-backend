@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.mentalhealth.mapper.KnowledgeMapper">
+
+    <resultMap id="KnowledgeResultMap" type="Knowledge">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="summary" property="summary"/>
+        <result column="content" property="content"/>
+        <result column="cover" property="cover"/>
+        <result column="category" property="category"/>
+        <result column="source" property="source"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <!-- 来自 article_favorite 联表，不是 knowledge 表的列 -->
+        <result column="favorited" property="favorited"/>
+    </resultMap>
+
+    <sql id="columns">
+        k.id, k.title, k.summary, k.content, k.cover, k.category, k.source,
+        k.view_count, k.status, k.create_time, k.update_time
+    </sql>
+
+    <select id="selectByCondition" resultMap="KnowledgeResultMap">
+        SELECT <include refid="columns"/>,
+               (f.id IS NOT NULL) AS favorited
+        FROM knowledge k
+        LEFT JOIN article_favorite f
+               ON f.article_id = k.id AND f.user_id = #{userId}
+        WHERE k.status = 1
+        <if test="category != null and category != ''">
+            AND k.category = #{category}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (k.title LIKE CONCAT('%', #{keyword}, '%')
+                 OR k.summary LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY k.update_time DESC, k.id DESC
+    </select>
+
+    <select id="selectById" resultMap="KnowledgeResultMap">
+        SELECT <include refid="columns"/>,
+               (f.id IS NOT NULL) AS favorited
+        FROM knowledge k
+        LEFT JOIN article_favorite f
+               ON f.article_id = k.id AND f.user_id = #{userId}
+        WHERE k.id = #{id}
+    </select>
+
+    <update id="increaseViewCount">
+        UPDATE knowledge SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <select id="selectTop" resultMap="KnowledgeResultMap">
+        SELECT <include refid="columns"/>,
+               0 AS favorited
+        FROM knowledge k
+        WHERE k.status = 1
+        ORDER BY k.view_count DESC, k.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO knowledge(title,summary,content,cover,category,source,view_count,status,create_time,update_time)
+        VALUES(#{title},#{summary},#{content},#{cover},#{category},#{source},#{viewCount},#{status},#{createTime},#{updateTime})
+    </insert>
+
+    <update id="update">
+        UPDATE knowledge
+        SET title=#{title},summary=#{summary},content=#{content},cover=#{cover},category=#{category},
+            source=#{source},view_count=#{viewCount},status=#{status},update_time=#{updateTime}
+        WHERE id=#{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM knowledge WHERE id=#{id}
+    </delete>
+
+</mapper>
